@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Extension Options</title>
+    <script src="options.js" defer></script>
+</head>
+<body>
+    <h2>Extension Settings</h2>
+    <label for="postCount">Number of posts to interact with:</label>
+    <input type="number" id="postCount" min="1" max="10">
+    <br>
+    <label for="scheduleTime">Preferred Time for Automation:</label>
+    <input type="time" id="scheduleTime">
+    <br>
+    <button id="save">Save Settings</button>
+</body>
+</html>
+
+// options.js
+document.addEventListener("DOMContentLoaded", () => {
+    chrome.storage.sync.get(["postCount", "scheduleTime"], (data) => {
+        document.getElementById("postCount").value = data.postCount || 3;
+        document.getElementById("scheduleTime").value = data.scheduleTime || "12:00";
+    });
+
+    document.getElementById("save").addEventListener("click", () => {
+        const postCount = parseInt(document.getElementById("postCount").value, 10);
+        const scheduleTime = document.getElementById("scheduleTime").value;
+        chrome.storage.sync.set({ postCount, scheduleTime });
+        alert("Settings saved successfully!");
+    });
+});
