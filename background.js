@@ -9,9 +9,9 @@ const DEFAULT_CONFIG = {
   enableLike: true,
   enableRepost: true,
   companyPages: ['acceldata'],
-  scheduleTime: '09:00',
+  scheduleTime: '11:00',
   scheduleDays: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
-  autoProcess: false,
+  autoProcess: true,
   lastRun: null,
   runHistory: []
 };

@@ -31,8 +31,10 @@ async function processLinkedInPosts() {
       const isLiked = await isPostLiked(post);
       if (!isLiked) {
         await likePost(post);
-        await delay(1000);
-        await repostPost(post);
+        if (config.enableRepost) {
+          await delay(1000);
+          await repostPost(post);
+        }
         console.log('LinkedIn Post Automator: Post liked');
       } else {
         console.log('LinkedIn Post Automator: Post already liked, skipping');
@@ -119,7 +121,7 @@ async function likePost(post) {
   try {
     // Find the like button using multiple strategies
     let likeButton = null;
-
+    post.scrollIntoView({ behavior: "smooth" });
     // Strategy 1: Try using the XPath pattern provided
     try {
       // This is a simplified version - in reality we'd need to adapt the XPath
