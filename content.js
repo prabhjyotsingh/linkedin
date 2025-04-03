@@ -15,17 +15,20 @@ async function processLinkedInPosts() {
   console.log('LinkedIn Post Automator: Starting to process posts');
 
   // Get posts on the page
-  const posts = await findPosts();
+  let posts = await findPosts();
   console.log(`LinkedIn Post Automator: Found ${posts.length} posts`);
 
   // Limit to configured number of posts
-  const postsToProcess = posts.slice(0, config.postsToProcess);
+  // const postsToProcess = posts.slice(0, config.postsToProcess);
 
   // Process each post
-  for (let i = 0; i < postsToProcess.length; i++) {
-    const post = postsToProcess[i];
-    console.log(`LinkedIn Post Automator: Processing post ${i + 1}/${postsToProcess.length}`);
-
+  for (let i = 0; i < config.postsToProcess; i++) {
+    if(i === posts.length){
+      posts = await findPosts();
+    }
+    const post = posts[i];
+    post.scrollIntoView({ behavior: "smooth" });
+    console.log(`LinkedIn Post Automator: Processing post ${i + 1}/${config.postsToProcess}`);
     // Like the post if enabled and not already liked
     if (config.enableLike) {
       const isLiked = await isPostLiked(post);
@@ -42,7 +45,7 @@ async function processLinkedInPosts() {
     }
 
     // Add delay between posts
-    if (i < postsToProcess.length - 1) {
+    if (i < config.postsToProcess - 1) {
       await delay(2000);
     }
   }
@@ -53,7 +56,7 @@ async function processLinkedInPosts() {
   chrome.runtime.sendMessage({
     action: 'processingComplete',
     results: {
-      postsProcessed: postsToProcess.length,
+      postsProcessed: config.postsToProcess,
       url: window.location.href,
       timestamp: new Date().toISOString()
     }
@@ -121,7 +124,6 @@ async function likePost(post) {
   try {
     // Find the like button using multiple strategies
     let likeButton = null;
-    post.scrollIntoView({ behavior: "smooth" });
     // Strategy 1: Try using the XPath pattern provided
     try {
       // This is a simplified version - in reality we'd need to adapt the XPath
