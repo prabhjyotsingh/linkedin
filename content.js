@@ -14,6 +14,20 @@ let config = {
 async function processLinkedInPosts() {
   console.log('LinkedIn Post Automator: Starting to process posts');
 
+  const sortBy = document.evaluate('//*[@id="sort-dropdown-trigger"]', document.body, null,
+      XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+  sortBy.click();
+  await delay(200);
+  document.evaluate(
+      ".//li/div/button",
+      sortBy.nextElementSibling,
+      null,
+      XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+      null
+  ).snapshotItem(1).click();
+  await delay(200);
+  sortBy.click();
+  await delay(3000);
   // Get posts on the page
   let posts = await findPosts();
   console.log(`LinkedIn Post Automator: Found ${posts.length} posts`);
@@ -53,7 +67,7 @@ async function processLinkedInPosts() {
   console.log('LinkedIn Post Automator: Finished processing posts');
 
   // Send results back to background script
-  chrome.runtime.sendMessage({
+  await chrome.runtime.sendMessage({
     action: 'processingComplete',
     results: {
       postsProcessed: config.postsToProcess,
@@ -61,6 +75,7 @@ async function processLinkedInPosts() {
       timestamp: new Date().toISOString()
     }
   });
+  return true;
 }
 
 /**
@@ -111,7 +126,7 @@ async function isPostLiked(post) {
 
     return false;
   } catch (error) {
-    console.error('LinkedIn Post Automator: Error checking if post is liked', error);
+    console.log('LinkedIn Post Automator: Error checking if post is liked', error);
     return false;
   }
 }
@@ -153,11 +168,11 @@ async function likePost(post) {
       await delay(500); // Short delay after clicking
       return true;
     } else {
-      console.error('LinkedIn Post Automator: Could not find like button');
+      console.log('LinkedIn Post Automator: Could not find like button');
       return false;
     }
   } catch (error) {
-    console.error('LinkedIn Post Automator: Error liking post', error);
+    console.log('LinkedIn Post Automator: Error liking post', error);
     return false;
   }
 }
@@ -183,7 +198,7 @@ async function isPostReposted(post) {
 
     return false;
   } catch (error) {
-    console.error('LinkedIn Post Automator: Error checking if post is reposted', error);
+    console.log('LinkedIn Post Automator: Error checking if post is reposted', error);
     return false;
   }
 }
@@ -226,15 +241,15 @@ async function repostPost(post) {
         await delay(1000); // Wait for repost to complete
         return true;
       } else {
-        console.error('LinkedIn Post Automator: Could not find repost confirmation button');
+        console.log('LinkedIn Post Automator: Could not find repost confirmation button');
         return false;
       }
     } else {
-      console.error('LinkedIn Post Automator: Could not find repost button');
+      console.log('LinkedIn Post Automator: Could not find repost button');
       return false;
     }
   } catch (error) {
-    console.error('LinkedIn Post Automator: Error reposting post', error);
+    console.log('LinkedIn Post Automator: Error reposting post', error);
     return false;
   }
 }

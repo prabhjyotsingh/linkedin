@@ -163,21 +163,21 @@ function runAutomation() {
         // Wait for page to load
         await new Promise(resolve => setTimeout(resolve, 5000));
 
+        // Update last run timestamp
+        chrome.storage.sync.set({
+          lastRun: new Date().toISOString()
+        });
+        
         // Send message to content script to process posts
-        chrome.tabs.sendMessage(tab.id, {
+        await chrome.tabs.sendMessage(tab.id, {
           action: 'processLinkedInPosts',
           config: {
             postsToProcess: config.postsToProcess
           }
         });
 
-        // Update last run timestamp
-        chrome.storage.sync.set({
-          lastRun: new Date().toISOString()
-        });
-
       } catch (error) {
-        console.error('LinkedIn Post Automator: Error during automation', error);
+        console.log('LinkedIn Post Automator: Error during automation', error);
       }
     }
   });

@@ -1,4 +1,4 @@
-rm -rf temp_package/
+rm -rf temp_package/ linkedin-post-automator-fixed.zip
 mkdir -p temp_package
 cd temp_package
 cp -r ../* .
