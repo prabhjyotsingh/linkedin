@@ -5,8 +5,7 @@
   "description": "Automatically like and repost LinkedIn company posts",
   "permissions": [
     "storage",
-    "alarms",
-    "scripting"
+    "alarms"
   ],
   "host_permissions": [
     "https://www.linkedin.com/*"
