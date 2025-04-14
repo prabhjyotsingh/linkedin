@@ -33,7 +33,7 @@ chrome.runtime.onInstalled.addListener((details) => {
 
 // Listen for alarm events
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'linkedinPostAutomation') {
+  if (alarm.name.startsWith('linkedinPostAutomation')) {
     console.log('LinkedIn Post Automator: Scheduled automation triggered');
     runAutomation();
   }
