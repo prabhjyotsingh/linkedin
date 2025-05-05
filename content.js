@@ -14,53 +14,92 @@ let config = {
 async function processLinkedInPosts() {
   console.log('LinkedIn Post Automator: Starting to process posts');
 
-  const sortBy = document.evaluate('//*[@id="sort-dropdown-trigger"]', document.body, null,
-      XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-  sortBy.click();
-  await delay(200);
-  document.evaluate(
-      ".//li/div/button",
-      sortBy.nextElementSibling,
-      null,
-      XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
-      null
-  ).snapshotItem(1).click();
-  await delay(200);
-  sortBy.click();
-  await delay(3000);
-  // Get posts on the page
-  let posts = await findPosts();
-  console.log(`LinkedIn Post Automator: Found ${posts.length} posts`);
+  if (location.pathname.startsWith('/company/')) {
+    const sortBy = document.evaluate('//*[@id="sort-dropdown-trigger"]',
+        document.body, null,
+        XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+    sortBy.click();
+    await delay(200);
+    document.evaluate(
+        ".//li/div/button",
+        sortBy.nextElementSibling,
+        null,
+        XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+        null
+    ).snapshotItem(1).click();
+    await delay(200);
+    sortBy.click();
+    await delay(3000);
+    // Get posts on the page
+    let posts = await findPosts();
+    console.log(`LinkedIn Post Automator: Found ${posts.length} posts`);
 
-  // Limit to configured number of posts
-  // const postsToProcess = posts.slice(0, config.postsToProcess);
+    // Limit to configured number of posts
+    // const postsToProcess = posts.slice(0, config.postsToProcess);
 
-  // Process each post
-  for (let i = 0; i < config.postsToProcess; i++) {
-    if(i === posts.length){
-      posts = await findPosts();
-    }
-    const post = posts[i];
-    post.scrollIntoView({ behavior: "smooth" });
-    console.log(`LinkedIn Post Automator: Processing post ${i + 1}/${config.postsToProcess}`);
-    // Like the post if enabled and not already liked
-    if (config.enableLike) {
-      const isLiked = await isPostLiked(post);
-      if (!isLiked) {
-        await likePost(post);
-        if (config.enableRepost) {
-          await delay(1000);
-          await repostPost(post);
+    // Process each post
+    for (let i = 0; i < config.postsToProcess; i++) {
+      if (i === posts.length) {
+        posts = await findPosts();
+      }
+      const post = posts[i];
+      post.scrollIntoView({behavior: "smooth"});
+      console.log(`LinkedIn Post Automator: Processing post ${i
+      + 1}/${config.postsToProcess}`);
+      // Like the post if enabled and not already liked
+      if (config.enableLike) {
+        const isLiked = await isPostLiked(post);
+        if (!isLiked) {
+          await likePost(post);
+          if (config.enableRepost) {
+            await delay(1000);
+            await repostPost(post);
+          }
+          console.log('LinkedIn Post Automator: Post liked');
+        } else {
+          console.log('LinkedIn Post Automator: Post already liked, skipping');
         }
-        console.log('LinkedIn Post Automator: Post liked');
-      } else {
-        console.log('LinkedIn Post Automator: Post already liked, skipping');
+      }
+
+      // Add delay between posts
+      if (i < config.postsToProcess - 1) {
+        await delay(2000);
       }
     }
+  } else {
+    console.log('LinkedIn Post Automator: No posts found');
+    const xpath = '/html/body/div[5]/div[3]/div/div/div[2]/div/div/main/div/section/div[2]/div/div/div[1]/ul/li[1]/div/div/div[2]/div/div/div/div/div[1]/div[4]/div[2]/span[1]/button[1]';
 
-    // Add delay between posts
-    if (i < config.postsToProcess - 1) {
-      await delay(2000);
+    let posts = Array.from(
+        document.querySelectorAll('.scaffold-finite-scroll__content>ul>li'));
+
+    // Process each post
+    for (let i = 0; i < config.postsToProcess; i++) {
+      const post = posts[i];
+      post.scrollIntoView({behavior: "smooth"});
+      console.log(`LinkedIn Post Automator: Processing post ${i
+      + 1}/${config.postsToProcess}`);
+      // Like the post if enabled and not already liked
+      if (config.enableLike) {
+        const isLiked = await isPostLiked(post);
+        if (!isLiked) {
+          await likePost(post);
+          /*
+          if (config.enableRepost) {
+            await delay(1000);
+            await repostPost(post);
+          }
+          */
+          console.log('LinkedIn Post Automator: Post liked');
+        } else {
+          console.log('LinkedIn Post Automator: Post already liked, skipping');
+        }
+      }
+
+      // Add delay between posts
+      if (i < config.postsToProcess - 1) {
+        await delay(2000);
+      }
     }
   }
 
@@ -75,6 +114,11 @@ async function processLinkedInPosts() {
       timestamp: new Date().toISOString()
     }
   });
+
+  await chrome.runtime.sendMessage({
+    action: 'thisProcessingComplete',
+    results: {config}
+  });
   return true;
 }
 
@@ -84,7 +128,8 @@ async function processLinkedInPosts() {
  */
 async function findPosts() {
   // Strategy 1: Look for post containers using class patterns
-  let posts = Array.from(document.querySelectorAll('div.feed-shared-update-v2'));
+  let posts = Array.from(
+      document.querySelectorAll('div.feed-shared-update-v2'));
 
   // If no posts found, try alternative selectors
   if (posts.length === 0) {
@@ -95,7 +140,8 @@ async function findPosts() {
   // If still no posts found, try more generic approach
   if (posts.length === 0) {
     // Strategy 3: Look for any elements that might contain posts
-    const feedContainer = document.querySelector('div.scaffold-finite-scroll__content');
+    const feedContainer = document.querySelector(
+        'div.scaffold-finite-scroll__content');
     if (feedContainer) {
       // Find direct children that might be posts
       posts = Array.from(feedContainer.children);
@@ -113,7 +159,8 @@ async function findPosts() {
 async function isPostLiked(post) {
   try {
     // Strategy 1: Look for filled like button using XPath pattern
-    const likeButton = findElementInPost(post, 'button', 'like', 'aria-pressed');
+    const likeButton = findElementInPost(post, 'button', 'like',
+        'aria-pressed');
     if (likeButton && likeButton.getAttribute('aria-pressed') === 'true') {
       return true;
     }
@@ -126,7 +173,8 @@ async function isPostLiked(post) {
 
     return false;
   } catch (error) {
-    console.log('LinkedIn Post Automator: Error checking if post is liked', error);
+    console.log('LinkedIn Post Automator: Error checking if post is liked',
+        error);
     return false;
   }
 }
@@ -144,10 +192,12 @@ async function likePost(post) {
       // This is a simplified version - in reality we'd need to adapt the XPath
       // to work relative to the current post
       const xpath = `.//button[contains(@id, 'ember') and contains(@aria-label, 'like')]`;
-      const result = document.evaluate(xpath, post, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+      const result = document.evaluate(xpath, post, null,
+          XPathResult.FIRST_ORDERED_NODE_TYPE, null);
       likeButton = result.singleNodeValue;
     } catch (e) {
-      console.log('LinkedIn Post Automator: XPath strategy failed, trying alternatives');
+      console.log(
+          'LinkedIn Post Automator: XPath strategy failed, trying alternatives');
     }
 
     // Strategy 2: Look for like button by common attributes
@@ -157,7 +207,8 @@ async function likePost(post) {
 
     // Strategy 3: Look for reaction button section and get first button
     if (!likeButton) {
-      const reactionSection = findElementInPost(post, 'div', 'social-actions');
+      const reactionSection = findElementInPost(post, 'div',
+          'social-actions');
       if (reactionSection) {
         likeButton = reactionSection.querySelector('button');
       }
@@ -185,20 +236,24 @@ async function likePost(post) {
 async function isPostReposted(post) {
   try {
     // Strategy 1: Look for repost button with active state
-    const repostButton = findElementInPost(post, 'button', 'repost', 'aria-pressed');
-    if (repostButton && repostButton.getAttribute('aria-pressed') === 'true') {
+    const repostButton = findElementInPost(post, 'button', 'repost',
+        'aria-pressed');
+    if (repostButton && repostButton.getAttribute('aria-pressed')
+        === 'true') {
       return true;
     }
 
     // Strategy 2: Look for visual indicators
-    const repostIcon = findElementInPost(post, 'li-icon[type="repost-filled"]');
+    const repostIcon = findElementInPost(post,
+        'li-icon[type="repost-filled"]');
     if (repostIcon) {
       return true;
     }
 
     return false;
   } catch (error) {
-    console.log('LinkedIn Post Automator: Error checking if post is reposted', error);
+    console.log('LinkedIn Post Automator: Error checking if post is reposted',
+        error);
     return false;
   }
 }
@@ -215,12 +270,14 @@ async function repostPost(post) {
     try {
       // This is a simplified version - in reality we'd need to adapt the XPath
       const xpath = `.//div[contains(@class, 'feed-shared-social-action-bar')]//button[contains(@id, 'ember') and contains(@class, 'artdeco-dropdown__trigger')]`;
-      const result = document.evaluate(xpath, post, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+      const result = document.evaluate(xpath, post, null,
+          XPathResult.FIRST_ORDERED_NODE_TYPE, null);
       repostButton = result.singleNodeValue;
     } catch (e) {
-      console.log('LinkedIn Post Automator: XPath strategy failed, trying alternatives');
+      console.log(
+          'LinkedIn Post Automator: XPath strategy failed, trying alternatives');
     }
-    console.log('repostButton1', repostButton);
+    console.log('LinkedIn Post Automator: repostButton1', repostButton);
 
     if (repostButton) {
       repostButton.click();
@@ -241,7 +298,8 @@ async function repostPost(post) {
         await delay(1000); // Wait for repost to complete
         return true;
       } else {
-        console.log('LinkedIn Post Automator: Could not find repost confirmation button');
+        console.log(
+            'LinkedIn Post Automator: Could not find repost confirmation button');
         return false;
       }
     } else {
@@ -283,7 +341,8 @@ function findElementInPost(post, selector, textContent, attribute) {
   }
 
   // Filter by attribute
-  const elementWithAttribute = matchingElements.find(el => el.hasAttribute(attribute));
+  const elementWithAttribute = matchingElements.find(
+      el => el.hasAttribute(attribute));
   return elementWithAttribute || matchingElements[0] || null;
 }
 

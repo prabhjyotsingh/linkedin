@@ -9,6 +9,7 @@ const DEFAULT_CONFIG = {
   enableLike: true,
   enableRepost: true,
   companyPages: ['acceldata'],
+  userPages: ['rconline'],
   scheduleTime: '11:00',
   scheduleDays: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
   autoProcess: true,
@@ -131,6 +132,55 @@ function setupScheduledAlarms() {
   });
 }
 
+async function openChromeTab(url, config) {
+  try {
+    // Find or create a tab for LinkedIn
+    const tabs = await chrome.tabs.query({url: 'https://www.linkedin.com/*'});
+    let tab;
+
+    if (tabs.length > 0) {
+      // Use existing LinkedIn tab
+      tab = tabs[0];
+      await chrome.tabs.update(tab.id, {url: url, active: true});
+    } else {
+      // Create new tab
+      tab = await chrome.tabs.create({url: url, active: true});
+    }
+
+    // Wait for page to load
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    // Update last run timestamp
+    chrome.storage.sync.set({
+      lastRun: new Date().toISOString()
+    });
+
+    // Send message to content script to process posts
+    await chrome.tabs.sendMessage(tab.id, {
+      action: 'processLinkedInPosts',
+      config: {
+        postsToProcess: config.postsToProcess
+      }
+    });
+
+  } catch (error) {
+    console.log('LinkedIn Post Automator: Error during automation', error);
+  }
+}
+
+function waitForProcessingComplete() {
+  return new Promise((resolve) => {
+    function messageListener(message, sender, sendResponse) {
+      if (message.action === 'thisProcessingComplete') {
+        chrome.runtime.onMessage.removeListener(messageListener);
+        resolve(message.results); // or just resolve() if no results needed
+      }
+    }
+
+    chrome.runtime.onMessage.addListener(messageListener);
+  });
+}
+
 /**
  * Run the automation process
  */
@@ -140,45 +190,20 @@ function runAutomation() {
   // Get configuration
   chrome.storage.sync.get({
     companyPages: ['acceldata'],
+    userPages: ['rconline'],
     postsToProcess: 3
   }, async (config) => {
     // Process each company page
     for (const company of config.companyPages) {
       const url = `https://www.linkedin.com/company/${company}/posts/`;
+      await openChromeTab(url, config);
+      await waitForProcessingComplete();
+    }
 
-      try {
-        // Find or create a tab for LinkedIn
-        const tabs = await chrome.tabs.query({ url: 'https://www.linkedin.com/*' });
-        let tab;
-
-        if (tabs.length > 0) {
-          // Use existing LinkedIn tab
-          tab = tabs[0];
-          await chrome.tabs.update(tab.id, { url: url, active: true });
-        } else {
-          // Create new tab
-          tab = await chrome.tabs.create({ url: url, active: true });
-        }
-
-        // Wait for page to load
-        await new Promise(resolve => setTimeout(resolve, 5000));
-
-        // Update last run timestamp
-        chrome.storage.sync.set({
-          lastRun: new Date().toISOString()
-        });
-        
-        // Send message to content script to process posts
-        await chrome.tabs.sendMessage(tab.id, {
-          action: 'processLinkedInPosts',
-          config: {
-            postsToProcess: config.postsToProcess
-          }
-        });
-
-      } catch (error) {
-        console.log('LinkedIn Post Automator: Error during automation', error);
-      }
+    for (const user of config.userPages) {
+      const url = `https://www.linkedin.com/in/${user}/recent-activity/all/`;
+      await openChromeTab(url, config);
+      await waitForProcessingComplete();
     }
   });
 }
