@@ -156,7 +156,7 @@ async function openChromeTab(url, config) {
     });
 
     // Send message to content script to process posts
-    await chrome.tabs.sendMessage(tab.id, {
+    chrome.tabs.sendMessage(tab.id, {
       action: 'processLinkedInPosts',
       config: {
         postsToProcess: config.postsToProcess
@@ -205,6 +205,11 @@ function runAutomation() {
       await openChromeTab(url, config);
       await waitForProcessingComplete();
     }
+
+    const tabs = await chrome.tabs.query({url: 'https://www.linkedin.com/*'});
+    chrome.tabs.remove(tabs[0].id, function() {
+      console.log('LinkedIn Post Automator: done');
+    });
   });
 }
 

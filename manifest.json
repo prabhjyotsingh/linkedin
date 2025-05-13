@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Post Automator",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Automatically like and repost LinkedIn company posts",
   "permissions": [
     "storage",

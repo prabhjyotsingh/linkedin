@@ -20,13 +20,17 @@ async function processLinkedInPosts() {
         XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
     sortBy.click();
     await delay(200);
-    document.evaluate(
-        ".//li/div/button",
-        sortBy.nextElementSibling,
-        null,
-        XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
-        null
-    ).snapshotItem(1).click();
+    try {
+      document.evaluate(
+          ".//li/div/button",
+          sortBy.nextElementSibling,
+          null,
+          XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+          null
+      ).snapshotItem(1).click();
+    } catch (e) {
+
+    }
     await delay(200);
     sortBy.click();
     await delay(3000);
@@ -377,7 +381,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     loadConfiguration().then(() => {
       processLinkedInPosts();
     });
-    return true; // Indicates async response
   }
 });
 
