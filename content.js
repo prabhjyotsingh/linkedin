@@ -15,15 +15,14 @@ async function processLinkedInPosts() {
   console.log('LinkedIn Post Automator: Starting to process posts');
 
   if (location.pathname.startsWith('/company/')) {
-    const sortBy = document.evaluate('//*[@id="sort-dropdown-trigger"]',
-        document.body, null,
-        XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+    const sortBy = [...document.querySelectorAll('*')]
+    .find(el => el.textContent.trim() === 'Top');
     sortBy.click();
-    await delay(200);
+    await delay(1000);
     try {
       document.evaluate(
-          ".//li/div/button",
-          sortBy.nextElementSibling,
+          ".//div/div[2]",
+          document.querySelector('div[data-floating-ui-portal]'),
           null,
           XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
           null
@@ -31,38 +30,32 @@ async function processLinkedInPosts() {
     } catch (e) {
 
     }
-    await delay(200);
-    sortBy.click();
-    await delay(3000);
+    await delay(2000);
     // Get posts on the page
     let posts = await findPosts();
     console.log(`LinkedIn Post Automator: Found ${posts.length} posts`);
-
+    await delay(200);
     // Limit to configured number of posts
     // const postsToProcess = posts.slice(0, config.postsToProcess);
 
     // Process each post
     for (let i = 0; i < config.postsToProcess; i++) {
-      if (i === posts.length) {
-        posts = await findPosts();
-      }
+      // if (i === posts.length) {
+      //   posts = await findPosts();
+      // }
       const post = posts[i];
       post.scrollIntoView({behavior: "smooth"});
       console.log(`LinkedIn Post Automator: Processing post ${i
       + 1}/${config.postsToProcess}`);
       // Like the post if enabled and not already liked
       if (config.enableLike) {
-        const isLiked = await isPostLiked(post);
-        if (!isLiked) {
-          await likePost(post);
-          if (config.enableRepost) {
-            await delay(1000);
-            await repostPost(post);
-          }
-          console.log('LinkedIn Post Automator: Post liked');
-        } else {
-          console.log('LinkedIn Post Automator: Post already liked, skipping');
+        await likePost(post);
+        if (config.enableRepost) {
+          await delay(1000);
+          await repostPost(post);
         }
+        console.log('LinkedIn Post Automator: Post liked');
+
       }
 
       // Add delay between posts
@@ -133,9 +126,10 @@ async function processLinkedInPosts() {
 async function findPosts() {
   // Strategy 1: Look for post containers using class patterns
   let posts = Array.from(
-      document.querySelectorAll('div.feed-shared-update-v2'));
+      document.querySelectorAll(
+          'button[aria-label="Reaction button state: no reaction"]'));
 
-  // If no posts found, try alternative selectors
+  /*// If no posts found, try alternative selectors
   if (posts.length === 0) {
     // Strategy 2: Look for post containers by structure
     posts = Array.from(document.querySelectorAll('div[data-urn]'));
@@ -150,7 +144,7 @@ async function findPosts() {
       // Find direct children that might be posts
       posts = Array.from(feedContainer.children);
     }
-  }
+  }*/
 
   return posts;
 }
@@ -216,6 +210,10 @@ async function likePost(post) {
       if (reactionSection) {
         likeButton = reactionSection.querySelector('button');
       }
+    }
+
+    if (!likeButton) {
+      likeButton = post;
     }
 
     if (likeButton) {
