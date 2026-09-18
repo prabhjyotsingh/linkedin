@@ -17,7 +17,7 @@ async function processLinkedInPosts() {
   if (location.pathname.startsWith('/company/')) {
     const sortBy = [...document.querySelectorAll('*')]
     .find(el => el.textContent.trim() === 'Top');
-    sortBy.click();
+    sortBy.parentNode.click();
     await delay(1000);
     try {
       document.evaluate(
@@ -28,7 +28,7 @@ async function processLinkedInPosts() {
           null
       ).snapshotItem(1).click();
     } catch (e) {
-
+      console.log('LinkedIn Post Automator: Error clicking sort option', e);
     }
     await delay(2000);
     // Get posts on the page
@@ -43,19 +43,23 @@ async function processLinkedInPosts() {
       // if (i === posts.length) {
       //   posts = await findPosts();
       // }
-      const post = posts[i];
-      post.scrollIntoView({behavior: "smooth"});
-      console.log(`LinkedIn Post Automator: Processing post ${i
-      + 1}/${config.postsToProcess}`);
-      // Like the post if enabled and not already liked
-      if (config.enableLike) {
-        await likePost(post);
-        if (config.enableRepost) {
-          await delay(1000);
-          await repostPost(post);
-        }
-        console.log('LinkedIn Post Automator: Post liked');
+      try {
+        const post = posts[i];
+        post.scrollIntoView({behavior: "smooth"});
+        console.log(`LinkedIn Post Automator: Processing post ${i
+        + 1}/${config.postsToProcess}`);
+        // Like the post if enabled and not already liked
+        if (config.enableLike) {
+          await likePost(post);
+          if (config.enableRepost) {
+            await delay(1000);
+            await repostPost(post);
+          }
+          console.log('LinkedIn Post Automator: Post liked');
 
+        }
+      } catch (e) {
+        console.error('LinkedIn Post Automator: most likely no more posts', e);
       }
 
       // Add delay between posts
@@ -279,19 +283,40 @@ async function repostPost(post) {
       console.log(
           'LinkedIn Post Automator: XPath strategy failed, trying alternatives');
     }
+
+    try {
+      if (!repostButton) {
+        repostButton = post.parentNode.parentNode.parentNode.parentNode.childNodes[2];
+      }
+    } catch (e) {
+      console.log(
+          'LinkedIn Post Automator: Error finding repost button alternative',
+          e);
+    }
+
     console.log('LinkedIn Post Automator: repostButton1', repostButton);
 
     if (repostButton) {
       repostButton.click();
       await delay(1000); // Wait for repost dialog
 
-      const repostDialogButton = document.evaluate(
+      let repostDialogButton = document.evaluate(
           ".//div[contains(@class, 'artdeco-dropdown__item')]",
           post,
           null,
           XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
           null
       ).snapshotItem(1);
+
+      if(!repostDialogButton) {
+        repostDialogButton = document.evaluate(
+            ".//div/div",
+            document.querySelector('div[data-floating-ui-portal]'),
+            null,
+            XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+            null
+        ).snapshotItem(4);
+      }
 
       // Find and click the "Repost" button in the dialog
 
